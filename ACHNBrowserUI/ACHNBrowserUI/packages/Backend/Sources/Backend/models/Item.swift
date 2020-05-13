@@ -14,40 +14,66 @@ public struct ItemResponse: Codable {
     let results: [Item]
 }
 
-public struct Item: Codable, Equatable, Identifiable {
+public struct NewItemResponse: Codable {
+    let total: Int
+    let results: [ItemWrapper]
+    
+    public struct ItemWrapper: Codable {
+        public let id: Int
+        public let name: String
+        public var content: Item
+        public let variations: [Variant]?
+    }
+}
+
+public struct Item: Codable, Equatable, Identifiable, Hashable {
+    static public func ==(lhs: Item, rhs: Item) -> Bool {
+        return lhs.id == rhs.id && lhs.category == rhs.category
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+        hasher.combine(category)
+    }
+    
     public var id: String { name }
+    public var internalID: Int?
+    
+    public var localizedName: String {
+        if let id = internalID {
+            return LocalizedItemService.shared.localizedNameFor(itemId: id) ?? name
+        }
+        return name
+    }
     
     public let name: String
     public let image: String?
     public let filename: String?
     public let house: String?
-    
-    public var itemImage: String? {
+    public let itemImage: String?
+    public var finalImage: String? {
         if let filename = filename {
             return filename
         } else if let image = image, !image.hasPrefix("https://storage") {
             return image
+        } else if let itemImage = itemImage {
+            return itemImage
         }
         return nil
     }
     
     public let obtainedFrom: String?
+    public let obtainedFromNew: [String]?
+    public let sourceNotes: String?
     public let dIY: Bool?
     public let customize: Bool?
     
-    public let variants: [Variant]?
+    public var variations: [Variant]?
     
     public let category: String
     
     public var appCategory: Category {
-        if category == "Fish - North" || category == "Fish - South" {
-            return .fish
-        } else if category == "Bugs - North" || category == "Buhs - South" {
-            return .bugs
-        } else if category == "Nook Miles" {
-            return .nookmiles
-        }
-        return Category(rawValue: category.lowercased())!
+        Category(itemCategory: category)
     }
         
     public let materials: [Material]?
@@ -63,6 +89,7 @@ public struct Item: Codable, Equatable, Identifiable {
     public let set: String?
     public let tag: String?
     public let themes: [String]?
+    public let colors: [String]?
 }
 
 // MARK: - Calendar
@@ -105,7 +132,7 @@ public extension Item {
                 return nil
         }
         if startTime == 0 && endTime == 0 {
-            return "All day"
+            return NSLocalizedString("All day", comment: "")
         }
         return "\(startTime) - \(endTime)h"
     }
@@ -129,12 +156,15 @@ public extension Sequence {
 
 public let static_item = Item(name: "Acoustic guitar",
                        image: nil,
-                       filename: "Test",
+                       filename: "https://acnhcdn.com/latest/FtrIcon/FtrAcorsticguitar_Remake_0_0.png",
                        house: nil,
+                       itemImage: nil,
                        obtainedFrom: "Crafting",
+                       obtainedFromNew: ["Crafting"],
+                       sourceNotes: "From somewhere",
                        dIY: true,
                        customize: true,
-                       variants: nil,
+                       variations: nil,
                        category: "Housewares",
                        materials: nil,
                        buy: 200,
@@ -146,4 +176,5 @@ public let static_item = Item(name: "Acoustic guitar",
                        activeTimes: nil,
                        set: nil,
                        tag: "Instrument",
-                       themes: nil)
+                       themes: nil,
+                       colors: nil)

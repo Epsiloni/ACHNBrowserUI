@@ -2,6 +2,8 @@
 ![Xcode Build](https://github.com/Dimillian/ACHNBrowserUI/workflows/Xcode%20build/badge.svg?branch=master)
 [![@dimillian](https://img.shields.io/badge/contact-@dimillian-5AA9E7.svg?style=flat)](https://twitter.com/dimillian)
 
+[You can now download the app on the App Store!](https://apps.apple.com/us/app/ac-helper/id1508764244?ls=1)
+
 # Animal Crossing New Horizon SwiftUI application!
 
 ![Image](images/promo2.png?)
@@ -36,3 +38,5 @@ Thanks to [ACNH API](http://acnhapi.com/) for the API that allow us to display v
 Thanks to [Nookazon](https://nookazon.com/) for item listings and trading platform. 
 
 Thanks to [Shihab](https://twitter.com/JPEGuin) for the app icons.
+
+Thanks to [imthe666st](https://github.com/imthe666st/ACNH) for the repository with localized data.

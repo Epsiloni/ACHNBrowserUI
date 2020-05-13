@@ -9,17 +9,20 @@
 import UIKit
 import SwiftUI
 import Backend
+import CoreSpotlight
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
     
+    let uiState = UIState()
+    
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         let contentView = TabbarView()
-            .environmentObject(UserCollection())
+            .environmentObject(UserCollection.shared)
             .environmentObject(Items.shared)
-            .environmentObject(UIState())
-            .environmentObject(SubcriptionManager.shared)
+            .environmentObject(uiState)
+            .environmentObject(SubscriptionManager.shared)
         
         if let windowScene = scene as? UIWindowScene {
             
@@ -29,26 +32,25 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             
             UINavigationBar.appearance().largeTitleTextAttributes = [
                 NSAttributedString.Key.font:UIFont.init(descriptor: descriptor2!, size: 34),
-                NSAttributedString.Key.foregroundColor: UIColor(named: "text")!
+                NSAttributedString.Key.foregroundColor: UIColor(named: "ACText")!
             ]
             
             UINavigationBar.appearance().titleTextAttributes = [
                 NSAttributedString.Key.font:UIFont.init(descriptor: descriptor!, size: 17),
-                NSAttributedString.Key.foregroundColor: UIColor(named: "text")!
+                NSAttributedString.Key.foregroundColor: UIColor(named: "ACText")!
             ]
             
-            UINavigationBar.appearance().barTintColor = UIColor(named: "dialogue")
-            UINavigationBar.appearance().backgroundColor = UIColor(named: "dialogue-reverse")
-            UINavigationBar.appearance().tintColor = UIColor(named: "text")
+            UINavigationBar.appearance().barTintColor = UIColor(named: "ACSecondaryBackground")
+            UINavigationBar.appearance().backgroundColor = UIColor(named: "ACBackground")
+            UINavigationBar.appearance().tintColor = UIColor(named: "ACText")
             
-            UITableView.appearance().backgroundColor = UIColor(named: "dialogue-reverse")
-            UITableViewCell.appearance().backgroundColor = UIColor(named: "dialogue")
+            UITableView.appearance().backgroundColor = UIColor(named: "ACBackground")
+            UITableViewCell.appearance().backgroundColor = UIColor(named: "ACSecondaryBackground")
             UITableView.appearance().tableFooterView = UIView()
             
-            
             UITabBar.appearance().unselectedItemTintColor = UIColor(named: "TabLabel")
-            UITabBar.appearance().barTintColor = UIColor(named: "grass")
-            UITabBar.appearance().backgroundColor = UIColor(named: "grass")
+            UITabBar.appearance().barTintColor = UIColor(named: "ACTabBarTint")
+            UITabBar.appearance().backgroundColor = UIColor(named: "ACTabBarTint")
             
             let window = UIWindow(windowScene: windowScene)
             window.rootViewController = UIHostingController(rootView: contentView)
@@ -57,6 +59,28 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 			window.windowScene?.titlebar?.titleVisibility = .hidden
 			#endif
             window.makeKeyAndVisible()
+        }
+        
+        if let activity = connectionOptions.userActivities.first {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                self.routeUserActivity(userActivity: activity)
+            }
+        }
+    }
+    
+    func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
+        routeUserActivity(userActivity: userActivity)
+    }
+    
+    func routeUserActivity(userActivity: NSUserActivity) {
+        if userActivity.activityType == CSSearchableItemActionType {
+            if let infos = userActivity.userInfo,
+                let id = infos[CSSearchableItemActivityIdentifier] as? String,
+                let name = id.components(separatedBy: "#").last,
+                let item = Items.shared.categories[Backend.Category(itemCategory: id.components(separatedBy: "#").first!)]?.first(where: { $0.name == name }) {
+                self.uiState.route = UIState.Route.item(item: item)
+                self.uiState.routeEnabled = true
+            }
         }
     }
 }

@@ -23,77 +23,83 @@ struct ItemDetailInfoView: View {
                     .frame(width: 20, height: 20)
                 Text(item.appCategory.label())
                     .font(.callout)
-                    .foregroundColor(.text)
+                    .foregroundColor(.acText)
             }
             HStack(alignment: .center) {
                 Spacer()
-                if item.itemImage == nil && displayedVariant == nil {
+                if item.finalImage == nil && displayedVariant == nil {
                     Image(item.appCategory.iconName())
                         .resizable()
                         .frame(width: 150, height: 150)
                 } else {
-                    ItemImage(path: displayedVariant?.filename ?? item.itemImage,
+                    ItemImage(path: displayedVariant?.content.image ?? item.finalImage,
                               size: 150)
                 }
                 Spacer()
             }
-            if item.obtainedFrom != nil {
-                Text(item.obtainedFrom!)
-                    .foregroundColor(.secondaryText)
+            if item.obtainedFrom != nil || item.obtainedFromNew?.isEmpty == false {
+                Text(LocalizedStringKey(item.obtainedFrom ?? item.obtainedFromNew?.first ?? ""))
+                    .foregroundColor(.acSecondaryText)
+                    .fontWeight(.semibold)
+            }
+            item.sourceNotes.map{
+                Text(LocalizedStringKey($0))
+                    .foregroundColor(.acSecondaryText)
+                    .font(.footnote)
             }
             if item.isCritter {
-                HStack(spacing: 8) {
-                    if item.rarity != nil {
+                VStack(spacing: 4) {
+                    item.rarity.map { rarity in
                         HStack(spacing: 4) {
                             Text("Rarity:")
-                            Text(item.rarity!)
-                                .foregroundColor(.secondaryText)
+                            Text(LocalizedStringKey(rarity))
+                                .foregroundColor(.acSecondaryText)
                         }
                     }
-                    if item.shadow != nil {
+                    item.shadow.map { shadow in
                         HStack(spacing: 4) {
                             Text("Shadow size:")
-                            Text(item.shadow!)
-                                .foregroundColor(.secondaryText)
+                            Text(LocalizedStringKey(shadow))
+                                .foregroundColor(.acSecondaryText)
                         }
                     }
                 }
             }
             if !item.isCritter {
-                Text("Customizable: \(item.customize == true ? "Yes" : "no")")
-                    .foregroundColor(.text)
+                Text("Customizable: \(item.customize == true ? NSLocalizedString("Yes", comment: "") : NSLocalizedString("No", comment: ""))")
+                    .foregroundColor(.acText)
             }
             HStack(spacing: 16) {
-                if item.sell != nil {
+                item.sell.map { sell in
                     HStack(spacing: 2) {
                         Image("icon-bell")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 25, height: 25)
-                        Text("\(item.sell!)")
+                        Text("\(sell)")
                             .font(.body)
                             .fontWeight(.semibold)
-                            .foregroundColor(.bell)
+                            .foregroundColor(.acHeaderBackground)
                         if item.isCritter {
-                            Text("Flick: ")
-                                .foregroundColor(.text)
+                            Text("Flick:")
+                                .foregroundColor(.acText)
                                 .padding(.leading, 8)
-                            Text("\(Int(Float(item.sell!) * 1.5))")
+                            Text("\(Int(Float(sell) * 1.5))")
                                 .font(.body)
                                 .fontWeight(.semibold)
-                                .foregroundColor(.bell)
+                                .foregroundColor(.acHeaderBackground)
                             
                         }
                     }
                 }
-                if item.buy != nil {
+                item.buy.map { buy in
                     HStack(spacing: 2) {
                         Image("icon-bells")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 25, height: 25)
-                        Text("\(item.buy!)")
-                            .foregroundColor(.bell)
+                        Text("\(buy)")
+                            .foregroundColor(.acHeaderBackground)
                     }
                 }
             }

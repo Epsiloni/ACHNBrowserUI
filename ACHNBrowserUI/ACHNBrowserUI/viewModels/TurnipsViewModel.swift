@@ -24,8 +24,7 @@ class TurnipsViewModel: ObservableObject {
     var exchangeCancellable: AnyCancellable?
         
     init() {
-        fetch()
-        turnipsCancellable = TurnipsPredictionService.shared.$predictions
+        turnipsCancellable = TurnipPredictionsService.shared.$predictions
             .receive(on: RunLoop.main)
             .sink(receiveValue: { [weak self] predictions in
                 self?.predictions = predictions
@@ -54,7 +53,7 @@ class TurnipsViewModel: ObservableObject {
         }
     }
     
-    func fetch() {
+    func fetchIslands() {
         exchangeCancellable = TurnipExchangeService.shared
             .fetchIslands()
             .receive(on: RunLoop.main)

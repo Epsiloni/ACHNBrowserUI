@@ -13,21 +13,30 @@ public enum Category: String, CaseIterable {
     case housewares, miscellaneous
     case wallMounted = "wall-mounted"
     case wallpapers, floors, rugs, photos, posters, fencing, tools
-    case tops, bottoms, dresses, headwear, accessories, socks, shoes, bags
+    case tops, bottoms, headwear, accessories, socks, shoes, bags
+    case dressup = "Dress-Up"
     case umbrellas, music, recipes, construction, nookmiles, other
     case art, bugs, fish, fossils
     
-    public func label() -> String {
-        switch self {
-        case .fish:
-            return "Fishes"
-        case .wallMounted:
-            return "Wall mounted"
-        case .nookmiles:
-            return "Nook Miles"
-        default:
-            return self.rawValue.capitalized
+    public init(itemCategory: String) {
+        if itemCategory == "Fish - North" || itemCategory == "Fish - South" {
+            self = .fish
+            return
+        } else if itemCategory == "Bugs - North" || itemCategory == "Buhs - South" {
+            self = .bugs
+            return
+        } else if itemCategory == "Nook Miles" {
+            self = .nookmiles
+            return
+        } else if itemCategory == "Dress-Up" {
+            self = .dressup
+            return
         }
+        self = Category(rawValue: itemCategory.lowercased())!
+    }
+    
+    public func label() -> LocalizedStringKey {
+        return LocalizedStringKey(self.rawValue)
     }
     
     public func iconName() -> String {
@@ -74,11 +83,35 @@ public enum Category: String, CaseIterable {
             return "icon-fish"
         case .tools:
             return "icon-tool"
-        case .dresses:
+        case .dressup:
             return "icon-top"
         case .shoes:
             return "icon-shoes"
         }
+    }
+    
+    public static func dataFilename(category: Category) -> String? {
+        if APIFurnitures().contains(category) {
+            return "furnitures"
+        } else if APIClothing().contains(category) {
+            return "clothing"
+        } else if category == .recipes {
+            return category.rawValue
+        }
+        return nil
+    }
+    
+    public static func APIFurnitures() -> [Category] {
+        [.housewares, .miscellaneous, .wallMounted, .art]
+    }
+    
+    public static func APIClothing() -> [Category] {
+        [.accessories, .headwear, .tops, .bottoms, .dressup, .socks, .shoes, .bags]
+    }
+        
+    public static func villagerFurnitures() -> [Category] {
+        [.housewares, .miscellaneous, .wallMounted, .art,
+         .wallpapers, .floors, .rugs, .photos, .music]
     }
     
     public static func items() -> [Category] {
@@ -88,11 +121,18 @@ public enum Category: String, CaseIterable {
     }
     
     public static func wardrobe() -> [Category] {
-        [.tops, .bottoms, .dresses, .headwear,
+        [.tops, .bottoms, .dressup, .headwear,
          .accessories, .socks, .shoes, .bags, .umbrellas]
     }
     
     public static func nature() -> [Category] {
         return [.fish, .bugs, .fossils]
+    }
+    
+    public static func icons() -> [Category] {
+        return  [.housewares, .recipes, .floors, .rugs, .wallpapers,
+                .fencing, .music, .tools, .nookmiles, .construction, .tops,
+                 .bottoms, .dressup, .headwear, .accessories, .socks, .bags, .umbrellas,
+                 .fish, .bugs, .fossils]
     }
 }

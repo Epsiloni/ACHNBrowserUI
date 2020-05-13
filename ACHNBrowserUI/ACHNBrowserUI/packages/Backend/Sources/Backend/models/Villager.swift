@@ -10,6 +10,8 @@ import Foundation
 
 public struct Villager: Identifiable, Codable, Equatable {
     public let id: Int
+    public let fileName: String?
+    public let catchPhrase: String?
     public let name: [String: String]
     public let personality: String
     public let birthday: String?
@@ -18,10 +20,26 @@ public struct Villager: Identifiable, Codable, Equatable {
         let formatter = DateFormatter()
         formatter.dateFormat = "d/M"
         let day = formatter.date(from: birthday)!
-        formatter.dateFormat = "dd MMMM"
+        formatter.setLocalizedDateFormatFromTemplate("dd MMMM")
         return formatter.string(from: day)
     }
     
     public let gender: String
     public let species: String
+    
+    public var localizedName: String { 
+        guard let languageCode = Locale.current.languageCode,
+            let localizedName = self.name["name-" + languageCode]
+            else {
+                return self.name["name-en"] ?? ""
+        }
+        
+        return localizedName
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, personality, birthday, gender, species
+        case fileName = "file-name"
+        case catchPhrase = "catch-phrase"
+    }
 }

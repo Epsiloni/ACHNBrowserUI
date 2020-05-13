@@ -12,9 +12,14 @@ import Backend
 import Purchases
 
 struct SubscribeView: View {
-    @EnvironmentObject private var subscriptionManager: SubcriptionManager
+    enum Source: String {
+        case dashboard, turnip, turnipForm, list
+    }
+    
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @Environment(\.presentationMode) private var presentationMode
     
+    let source: Source
     @State private var sheetURL: URL?
     
     private var sub: Purchases.Package? {
@@ -31,10 +36,14 @@ struct SubscribeView: View {
     private var dismissButton: some View {
         Button(action: {
             self.presentationMode.wrappedValue.dismiss()
-        }) {
-            Text("Close")
-        }
-        .safeHoverEffectBarItem(position: .trailing)
+        }, label: {
+            Image(systemName: "xmark.circle.fill")
+                .style(appStyle: .barButton)
+                .foregroundColor(.acText)
+        })
+        .buttonStyle(BorderedBarButtonStyle())
+        .accentColor(Color.acText.opacity(0.2))
+        .safeHoverEffectBarItem(position: .leading)
     }
     
     private var upperPart: some View {
@@ -43,7 +52,7 @@ struct SubscribeView: View {
                 Text("Upgrade to +")
                     .font(.largeTitle)
                     .fontWeight(.bold)
-                    .foregroundColor(.bell)
+                    .foregroundColor(.acHeaderBackground)
                 Image("icon-bell")
             }
             .padding(.top, 32)
@@ -51,19 +60,14 @@ struct SubscribeView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 320)
-                .padding()
-            Text("""
-                            Subscribing to AC Helper+ is a great way to to show support to our free and open source project.♥️
-
-                            You also get access to a great feature, turnip predictions notifications! 📈
-
-                            Everyday at 8 and 12 you'll get a notification with the average buy price of your store.
-
-                            The more in game daily prices you enter after monday morning, the better next predictions will be!
-
-                            """)
+            Button(action: {
+                NotificationManager.shared.testNotification()
+            }) {
+                Text("Tap here to preview a notification").foregroundColor(.acHeaderBackground)
+            }
+            Text("ACHelperPlusDescription")
                 .font(.body)
-                .foregroundColor(.text)
+                .foregroundColor(.acText)
                 .frame(width: 320)
                 .padding()
                 .lineLimit(nil)
@@ -71,11 +75,12 @@ struct SubscribeView: View {
                 if self.subscriptionManager.subscriptionStatus == .subscribed {
                     self.presentationMode.wrappedValue.dismiss()
                 } else {
-                    self.subscriptionManager.puschase(product: self.sub!)
+                    self.subscriptionManager.purchase(source: self.source.rawValue,
+                                                      product: self.sub!)
                 }
             }, label: self.subscriptionManager.subscriptionStatus == .subscribed ?
-                "Thanks you for your support!" :
-                "Subscribe for \(price) / Month")
+                NSLocalizedString("Thank you for your support!", comment: "") :
+                NSLocalizedString("Subscribe for \(price) / Month", comment: ""))
             .opacity(subscriptionManager.inPaymentProgress ? 0.5 : 1.0)
             .disabled(subscriptionManager.inPaymentProgress)
 
@@ -89,40 +94,42 @@ struct SubscribeView: View {
                 .fontWeight(.bold)
                 .foregroundColor(.white)
                 .frame(width: 290, height: 30)
-        }.buttonStyle(PlainRoundedButton()).accentColor(.grass).safeHoverEffect()
+        }.buttonStyle(PlainRoundedButton()).accentColor(.acTabBarTint).safeHoverEffect()
     }
     
     private var lowerPart: some View {
         Group {
-            Text("""
-                A \(price) per month purchase will be applied to your iTunes account on confirmation.
-                Subscriptions will automatically renew unless canceled within 24-hours before the end of the current period.
-                You can cancel anytime with your iTunes account settings. Any unused portion of a free trial will be forfeited if you purchase a subscription.
-                """)
+            Text("ACHelperPlusDetails")
+                .font(.body)
+                .foregroundColor(.acText)
+                .frame(width: 320)
+                .padding()
+                .lineLimit(nil)
+            Spacer(minLength: 16)
+            Text("ACHelperPlusPriceAndAboDetail \(price)")
                 .font(.caption)
-                .foregroundColor(.text)
+                .foregroundColor(.acText)
                 .frame(width: 320)
                 .padding()
                 .lineLimit(nil)
             Spacer(minLength: 16)
             makeBorderedButton(action: {
                 self.sheetURL = URL(string: "https://github.com/Dimillian/ACHNBrowserUI/blob/master/privacy-policy.md#ac-helper-privacy-policy")
-            }, label: "Privacy policy")
+            }, label: NSLocalizedString("Privacy Policy", comment: ""))
             
             Spacer(minLength: 16)
             makeBorderedButton(action: {
                 self.sheetURL = URL(string: "https://github.com/Dimillian/ACHNBrowserUI/blob/master/term-of-use.md#ac-helper-term-of-use")
-            }, label: "Term of Use")
-            
-            Spacer(minLength: 300)
-        }.background(Color.dialogueReverse.edgesIgnoringSafeArea(.all))
+            }, label: NSLocalizedString("Terms of Use", comment: ""))
+            Spacer(minLength: 32)
+        }.background(Color.acBackground.edgesIgnoringSafeArea(.all))
     }
 
     var body: some View {
         NavigationView {
             ScrollView(.vertical) {
                 ZStack {
-                    Color.dialogueReverse.edgesIgnoringSafeArea(.all)
+                    Color.acBackground.edgesIgnoringSafeArea(.all)
                     if sub != nil {
                         VStack {
                             upperPart
@@ -136,7 +143,7 @@ struct SubscribeView: View {
                 }
             }
             .sheet(item: $sheetURL, content: { SafariView(url: $0) })
-            .navigationBarItems(trailing: dismissButton)
+            .navigationBarItems(leading: dismissButton)
             .navigationBarTitle(Text("AC Helper+"),
                                 displayMode: .inline)
         }.navigationViewStyle(StackNavigationViewStyle())
@@ -145,6 +152,6 @@ struct SubscribeView: View {
 
 struct SubscribeViewPreviews: PreviewProvider {
     static var previews: some View {
-        SubscribeView()
+        SubscribeView(source: .list)
     }
 }

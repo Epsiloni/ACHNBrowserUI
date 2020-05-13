@@ -10,44 +10,74 @@ import SwiftUI
 import Backend
 
 struct TurnipsChartBottomLegendView: View {
+    struct HeightPreferenceKey: PreferenceKey {
+        static var defaultValue: CGFloat?
+        static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) {
+            if let newValue = nextValue() { value = newValue }
+        }
+    }
+    
     let predictions: TurnipPredictions
     private let weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    
+    @State private var textsHeight: CGFloat?
 
     var body: some View {
-        GeometryReader(content: texts)
+        GeometryReader(content: computeTexts)
     }
 
-    func texts(for geometry: GeometryProxy) -> some View {
-        let frame = geometry.frame(in: .local)
-        let (_, _, _, ratioX) = predictions.minMax?.minMaxAndRatios(rect: frame) ?? (0, 0, 0, 0)
+    func computeTexts(for geometry: GeometryProxy) -> some View {
+        
+        let rect = geometry.frame(in: .local)
+        let (_, _, _, ratioX) = predictions.minMax?.roundedMinMaxAndRatios(rect: rect) ?? (0, 0, 0, 0)
         let count = predictions.minMax?.count ?? 0
+        return texts(count: count, ratioX: ratioX)
+            .propagateHeight(HeightPreferenceKey.self)
+    }
 
-        return VStack {
-            ZStack {
+    func texts(count: Int, ratioX: CGFloat) -> some View {
+        VStack {
+            ZStack(alignment: .leading) {
                 ForEach(0..<count) { offset in
-                    self.yAxisText(offset: offset, ratioX: ratioX, frame: frame)
+                    self.meridiem(offset: offset, ratioX: ratioX)
                 }
             }
-            ZStack {
+            ZStack(alignment: .leading) {
                 ForEach(Array(weekdays.enumerated()), id: \.0) { offset, weekday in
-                    // TODO: investigate AlignmentGuide instead of guessing the exact position
-                    Text(weekday)
-                        .font(.callout)
-                        .fontWeight(.bold)
-                        .foregroundColor(.text)
-                        .position(x: CGFloat(offset + 1) * ratioX/2 + CGFloat(offset) * ratioX * 1.5, y: frame.midY)
+                    self.weekdays(offset: offset, weekday: weekday, ratioX: ratioX)
                 }
             }
         }
+        
     }
 
-    // TODO: investigate AlignmentGuide instead of guessing the exact position
-    func yAxisText(offset: Int, ratioX: CGFloat, frame: CGRect) -> some View {
-        let isAM = offset == 0 || offset.isMultiple(of: 2)
-        return Text(isAM ? "AM" : "PM")
+    func meridiem(offset: Int, ratioX: CGFloat) -> some View {
+        Text(offset.isAM ? "AM" : "PM")
             .font(.footnote)
             .fontWeight(.semibold)
-            .foregroundColor(.text)
-            .position(x: CGFloat(offset) * ratioX, y: frame.midY)
+            .foregroundColor(.acText)
+            .alignmentGuide(.leading, computeValue: { d in
+                -CGFloat(offset) * ratioX
+            })
+    }
+
+    func weekdays(offset: Int, weekday: String, ratioX: CGFloat) -> some View {
+        Text(LocalizedStringKey(weekday))
+            .font(.callout)
+            .fontWeight(.bold)
+            .foregroundColor(.acText)
+            .alignmentGuide(.leading, computeValue: { d in
+                -CGFloat(offset * 2 + 1) * ratioX + d.width/2
+            })
+    }
+}
+
+private extension Int {
+    var isAM: Bool { self == 0 || isMultiple(of: 2) }
+}
+
+struct TurnipsChartBottomLegendView_Previews: PreviewProvider {
+    static var previews: some View {
+        TurnipsChartBottomLegendView(predictions: TurnipsChartView_Previews.predictions)
     }
 }

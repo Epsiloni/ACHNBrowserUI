@@ -13,21 +13,22 @@ import UI
 struct ItemsCrosslineSectionView: View {
     let title: String
     let items: [Item]
+    let icon: String
     
     @Binding var currentItem: Item
     @Binding var selectedVariant: Variant?
     
     var body: some View {
-        Section(header: SectionHeaderView(text: title)) {
+        Section(header: SectionHeaderView(text: title, icon: icon)) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack {
                     ForEach(items) { item in
                         VStack(alignment: .center, spacing: 4) {
-                            ItemImage(path: item.filename,
+                            ItemImage(path: item.finalImage,
                                       size: 75)
-                            Text(item.name)
+                            Text(item.localizedName)
                                 .font(.caption)
-                                .foregroundColor(.text)
+                                .foregroundColor(.acText)
                         }.onTapGesture {
                             FeedbackGenerator.shared.triggerSelection()
                             self.selectedVariant = nil
@@ -45,6 +46,7 @@ struct ItemsCrosslineSectionView_Previews: PreviewProvider {
     static var previews: some View {
         ItemsCrosslineSectionView(title: "Preview",
                                   items: [],
+                                  icon: "eyedropper.full",
                                   currentItem: .constant(static_item),
                                   selectedVariant: .constant(nil))
     }

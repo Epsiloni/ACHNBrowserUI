@@ -13,7 +13,7 @@ import Backend
 struct TurnipsView: View {
     // MARK: - Vars
     private enum TurnipsDisplay: String, CaseIterable {
-        case average, minMax, profits, chart
+        case minMax, average, profits, chart
         
         func title() -> String {
             switch self {
@@ -23,20 +23,17 @@ struct TurnipsView: View {
             case .chart: return "Chart"
             }
         }
-    }
-    
-    private enum Sheet: String, Identifiable {
-        case form, subscription
-        
-        var id: String {
-            self.rawValue
+
+        var isChart: Bool {
+            get { self == .chart }
+            set { }
         }
     }
     
-    @EnvironmentObject private var subManager: SubcriptionManager
+    @EnvironmentObject private var subManager: SubscriptionManager
     @ObservedObject private var viewModel = TurnipsViewModel()
-    @State private var presentedSheet: Sheet?
-    @State private var turnipsDisplay: TurnipsDisplay = .average
+    @State private var presentedSheet: Sheet.SheetType?
+    @State private var turnipsDisplay: TurnipsDisplay = .minMax
     
     private let labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
     
@@ -54,12 +51,12 @@ struct TurnipsView: View {
                 if UIDevice.current.userInterfaceIdiom != .pad ||
                     (UIDevice.current.orientation == .portrait ||
                         UIDevice.current.orientation == .portraitUpsideDown){
-                    Section(header: SectionHeaderView(text: "Your prices")) {
+                    Section(header: SectionHeaderView(text: "Your prices", icon: "pencil")) {
                         Button(action: {
-                            self.presentedSheet = .form
+                            self.presentedSheet = .turnipsForm(subManager: self.subManager)
                         }) {
                             Text(TurnipFields.exist() ? "Edit your in game prices" : "Add your in game prices")
-                                .foregroundColor(.bell)
+                                .foregroundColor(.acHeaderBackground)
                         }
                     }
                 }
@@ -70,72 +67,86 @@ struct TurnipsView: View {
             .environment(\.horizontalSizeClass, .regular)
             .navigationBarTitle("Turnips",
                                 displayMode: .automatic)
-            .sheet(item: $presentedSheet, content: makeSheet)
+            .navigationBarItems(trailing: shareButton)
+            .sheet(item: $presentedSheet, content: {
+                Sheet(sheetType: $0)
+            })
         }
         .onAppear(perform: NotificationManager.shared.registerForNotifications)
+        .onAppear(perform: viewModel.fetchIslands)
     }
 }
 
 // MARK: - Views
 extension TurnipsView {
-    
-    private func makeSheet(_ sheet: Sheet) -> some View {
-        switch sheet {
-        case .form:
-            return AnyView(NavigationView {
-                TurnipsFormView().environmentObject(subManager)
-                
-                }.navigationViewStyle(StackNavigationViewStyle()))
-        case .subscription:
-            return AnyView(SubscribeView().environmentObject(subManager))
+    private var shareButton: some View {
+        Button(action: {
+            let image = NavigationView {
+                List {
+                    self.predictionsSection
+                }
+            }
+            .listStyle(GroupedListStyle())
+            .environment(\.horizontalSizeClass, .regular)
+            .navigationViewStyle(StackNavigationViewStyle())
+            .frame(width: 350, height: 650).asImage()
+            self.presentedSheet = .share(content: [ItemDetailSource(name: "Turnips prediction", image: image)])
+        }) {
+            Image(systemName: "square.and.arrow.up")
+                .style(appStyle: .barButton)
+                .foregroundColor(.acText)
         }
+        .buttonStyle(BorderedBarButtonStyle())
+        .accentColor(Color.acText.opacity(0.2))
+        .safeHoverEffectBarItem(position: .trailing)
     }
     
     private var subscriptionSection: some View {
-        Section(header: SectionHeaderView(text: "AC Helper+")) {
+        Section(header: SectionHeaderView(text: "AC Helper+", icon: "heart.fill")) {
             VStack(spacing: 8) {
                 Button(action: {
-                    self.presentedSheet = .subscription
+                    self.presentedSheet = .subscription(source: .turnip, subManager: self.subManager)
                 }) {
                     Text("To help us support the application and get turnip predictions notification, you can try out AC Helper+")
-                        .foregroundColor(.secondaryText)
+                        .foregroundColor(.acSecondaryText)
                         .lineLimit(nil)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 8)
                 }
                 Button(action: {
-                    self.presentedSheet = .subscription
+                    self.presentedSheet = .subscription(source: .turnip, subManager: self.subManager)
                 }) {
-                    Text("See more...")
+                    Text("Learn more...")
                         .font(.headline)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                 }.buttonStyle(PlainRoundedButton())
-                    .accentColor(.bell)
+                    .accentColor(.acHeaderBackground)
                     .padding(.bottom, 8)
             }
         }
     }
     
     private var predictionsSection: some View {
-        Section(header: SectionHeaderView(text: turnipsDisplay.title()),
+        Section(header: SectionHeaderView(text: turnipsDisplay.title(), icon: "dollarsign.circle.fill"),
                 footer: Text(viewModel.pendingNotifications == 0 ? "" :
-                    """
-                    You'll receive prices predictions in \(viewModel.pendingNotifications - 1) upcoming
-                    daily notifications.
-                    """)
+                    "\(viewModel.pendingNotifications - 1) upcomingDailyNotifications")
                     .font(.footnote)
                     .foregroundColor(.catalogUnselected)
                     .lineLimit(nil)) {
             if viewModel.averagesPrices != nil && viewModel.minMaxPrices != nil {
                 Picker(selection: $turnipsDisplay, label: Text("")) {
                     ForEach(TurnipsDisplay.allCases, id: \.self) { section in
-                        Text(section.rawValue.capitalized)
+                        Text(LocalizedStringKey(section.rawValue.capitalized))
                     }
                 }
                 .pickerStyle(SegmentedPickerStyle())
 
                 if turnipsDisplay != .chart {
+                    if turnipsDisplay == .profits && viewModel.averagesProfits != nil {
+                        Text("Profits estimates are computed using the average of the current period")
+                            .foregroundColor(.acSecondaryText)
+                    }
                     HStack {
                         Text("Day").fontWeight(.bold)
                         Spacer()
@@ -144,6 +155,7 @@ extension TurnipsView {
                         Text("PM").fontWeight(.bold)
                     }
                 }
+                
                 if turnipsDisplay == .average {
                     ForEach(0..<viewModel.averagesPrices!.count) { i in
                         TurnipsAveragePriceRow(label: self.labels[i],
@@ -162,38 +174,48 @@ extension TurnipsView {
                         }
                     } else {
                         Text("Please add the amount of turnips you bought and for how much")
-                            .foregroundColor(.bell)
+                            .foregroundColor(.acHeaderBackground)
                             .onTapGesture {
-                                self.presentedSheet = .form
+                                self.presentedSheet = .turnipsForm(subManager: self.subManager)
                         }
                     }
                 } else if turnipsDisplay == .chart {
-                    TurnipsChartView(predictions: viewModel.predictions!).padding(.top, 8)
+                    if viewModel.predictions != nil {
+                        TurnipsChartView(
+                            predictions: viewModel.predictions!,
+                            animateCurves: $turnipsDisplay.isChart
+                        ).padding(.top, 8)
+                    } else {
+                        Text("Add your in game turnip prices to see the predictions chart")
+                            .foregroundColor(.acHeaderBackground)
+                            .onTapGesture {
+                                self.presentedSheet = .turnipsForm(subManager: self.subManager)
+                        }
+                    }
+                   
                 }
             } else {
                 Text("Add your in game turnip prices to see predictions")
-                    .foregroundColor(.bell)
+                    .foregroundColor(.acHeaderBackground)
                     .onTapGesture {
-                        self.presentedSheet = .form
+                        self.presentedSheet = .turnipsForm(subManager: self.subManager)
                 }
             }
         }
     }
     
     private var exchangeSection: some View {
-        Group {
+        Section(header: SectionHeaderView(text: "Turnip.Exchange", icon: "bitcoinsign.circle.fill")) {
             if viewModel.islands?.isEmpty == false {
-                Section(header: SectionHeaderView(text: "Exchange")) {
-                    viewModel.islands.map {
-                        ForEach($0) { island in
-                            NavigationLink(destination: IslandDetailView(island: island)) {
-                                TurnipIslandRow(island: island)
-                            }
+                viewModel.islands.map {
+                    ForEach($0) { island in
+                        NavigationLink(destination: IslandDetailView(island: island)) {
+                            TurnipIslandRow(island: island)
                         }
                     }
                 }
             } else {
-                EmptyView()
+                RowLoadingView(isLoading: .constant(true))
             }
         }
     }

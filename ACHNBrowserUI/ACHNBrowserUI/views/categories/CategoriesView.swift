@@ -13,6 +13,7 @@ struct CategoriesView: View {
     // MARK: - Vars
     let categories: [Backend.Category]
     
+    @EnvironmentObject var items: Items
     @ObservedObject var viewModel = CategoriesSearchViewModel()
     @State var isLoadingData = false
 
@@ -26,21 +27,33 @@ struct CategoriesView: View {
     // MARK: - Body
     var body: some View {
         NavigationView {
-            VStack {
-                SearchField(searchText: $viewModel.searchText)
-                    .padding(.leading, 8)
-                    .padding(.trailing, 8)
-                    .padding(.top, 8)
-                    .padding(.bottom, 4)
-                if viewModel.searchText.isEmpty {
-                    categoriesList
-                } else {
-                    searchList
+            List {
+                Section(header: SearchField(searchText: $viewModel.searchText)) {
+                        if viewModel.searchText.isEmpty {
+                            makeSubCategories(name: "Nature",
+                                              icon: Backend.Category.fossils.iconName(),
+                                              categories: Backend.Category.nature())
+                            makeSubCategories(name: "Wardrobe",
+                                              icon: Backend.Category.dressup.iconName(),
+                                              categories: Backend.Category.wardrobe())
+                            makeCategories()
+                        } else {
+                            if viewModel.isLoadingData {
+                                RowLoadingView(isLoading: $isLoadingData)
+                            } else if searchCategories.isEmpty {
+                                Text("No results for \(viewModel.searchText)")
+                                    .foregroundColor(.acSecondaryText)
+                            } else {
+                                ForEach(searchCategories, id: \.0, content: searchSection)
+                            }
+                        }
                 }
             }
-            .navigationBarTitle(Text("Catalog"), displayMode: .inline)
-            .background(Color.dialogueReverse)
+            .listStyle(GroupedListStyle())
+            .navigationBarTitle(Text("Catalog"), displayMode: .automatic)
             .onReceive(viewModel.$isLoadingData) { self.isLoadingData = $0 }
+            .modifier(DismissingKeyboardOnSwipe())
+      
             
             ItemsListView(viewModel: ItemsViewModel(category: .housewares))
         }
@@ -49,94 +62,39 @@ struct CategoriesView: View {
 
 // MARK: - Views
 extension CategoriesView {
-    func makeCategories() -> some View {
+    private func makeCategories() -> some View {
         ForEach(categories, id: \.self) { categorie in
             CategoryRowView(category: categorie)
         }
     }
     
-    func makeWardrobeCell() -> some View {
-        NavigationLink(destination: CategoryDetailView(categories: Category.wardrobe())
-            .navigationBarTitle("Wardrobe")) {
+    private func makeSubCategories(name: String, icon: String, categories: [Backend.Category]) -> some View {
+        NavigationLink(destination: CategoryDetailView(categories: categories)
+            .navigationBarTitle(LocalizedStringKey(name))) {
                 HStack {
-                    Image(Category.dresses.iconName())
+                    Image(icon)
                         .renderingMode(.original)
                         .resizable()
                         .frame(width: 46, height: 46)
-                    Text("Wardrobe")
-                        .font(.headline)
-                        .foregroundColor(.text)
+                    Text(LocalizedStringKey(name))
+                        .style(appStyle: .rowTitle)
+                    Spacer()
+                    Text("\(items.itemsCount(for: categories))")
+                        .style(appStyle: .rowDescription)
                 }
         }
     }
-    
-    func makeNatureCell() -> some View {
-        NavigationLink(destination: CategoryDetailView(categories: Category.nature())
-            .navigationBarTitle("Nature")) {
-                HStack {
-                    Image(Category.fossils.iconName())
-                        .renderingMode(.original)
-                        .resizable()
-                        .frame(width: 46, height: 46)
-                    Text("Nature")
-                        .font(.headline)
-                        .foregroundColor(.text)
-                }
-        }
-    }
-    
-    
-    func makeSearchCategoryHeader(category: Backend.Category) -> some View {
-        HStack {
-            Image(category.iconName())
-                .renderingMode(.original)
-                .resizable()
-                .frame(width: 30, height: 30)
-            Text(category.label())
-                .font(.subheadline)
-        }
-    }
-    
-    
+
     private func searchSection(category: Backend.Category, items: [Item]) -> some View {
-        Section(header: self.makeSearchCategoryHeader(category: category)) {
+        Section(header: CategoryHeaderView(category: category)) {
             ForEach(items, content: self.searchItemRow)
         }
     }
     
     private func searchItemRow(item: Item) -> some View {
         NavigationLink(destination: ItemDetailView(item: item)) {
-            ItemRowView(displayMode: .big, item: item)
+            ItemRowView(displayMode: .large, item: item)
         }
-    }
-    
-    private var loadingView: some View {
-        VStack {
-            HStack { Spacer() }
-            Spacer()
-            ActivityIndicator(isAnimating: $isLoadingData, style: .large)
-            Spacer()
-        }.background(Color.dialogue)
-    }
-    
-    
-    private var categoriesList: some View {
-        List {
-            makeNatureCell()
-            makeWardrobeCell()
-            makeCategories()
-        }.modifier(DismissingKeyboardOnSwipe())
-    }
-    
-    private var searchList: some View {
-        ZStack {
-            List {
-                ForEach(searchCategories, id: \.0, content: searchSection)
-            }
-            loadingView
-                .opacity(isLoadingData ? 80/100 : 0)
-                .animation(.default)
-        }.modifier(DismissingKeyboardOnSwipe())
     }
 }
 

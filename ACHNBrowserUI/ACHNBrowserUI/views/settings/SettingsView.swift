@@ -7,10 +7,11 @@
 //
 
 import SwiftUI
+import SwiftUIKit
 import Backend
 
 struct SettingsView: View {
-    @EnvironmentObject private var subscriptionManager: SubcriptionManager
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @Environment(\.presentationMode) private var presentationMode
     @ObservedObject var appUserDefaults = AppUserDefaults.shared
         
@@ -18,8 +19,12 @@ struct SettingsView: View {
         Button(action: {
             self.presentationMode.wrappedValue.dismiss()
         }, label: {
-            Text("Dismiss")
+            Image(systemName: "xmark.circle.fill")
+                .style(appStyle: .barButton)
+                .foregroundColor(.acText)
         })
+        .buttonStyle(BorderedBarButtonStyle())
+        .accentColor(Color.acText.opacity(0.2))
         .safeHoverEffectBarItem(position: .leading)
     }
 
@@ -37,7 +42,7 @@ struct SettingsView: View {
                     Picker(selection: $appUserDefaults.hemisphere,
                            label: Text("Hemisphere")) {
                             ForEach(Hemisphere.allCases, id: \.self) { hemispehere in
-                                Text(hemispehere.rawValue.capitalized).tag(hemispehere)
+                                Text(LocalizedStringKey(hemispehere.rawValue.capitalized)).tag(hemispehere)
                             }
                     }
                     Picker(selection: $appUserDefaults.fruit,
@@ -48,7 +53,7 @@ struct SettingsView: View {
                                         .renderingMode(.original)
                                         .resizable()
                                         .frame(width: 30, height: 30)
-                                    Text(fruit.rawValue.capitalized).tag(fruit)
+                                    Text(LocalizedStringKey(fruit.rawValue.capitalized)).tag(fruit)
                                 }
                             }
                     }
@@ -56,21 +61,21 @@ struct SettingsView: View {
                     Picker(selection: $appUserDefaults.nookShop,
                            label: Text("Nook shop")) {
                             ForEach(Infrastructure.NookShop.allCases, id: \.self) { shop in
-                                Text(shop.rawValue).tag(shop)
+                                Text(LocalizedStringKey(shop.rawValue)).tag(shop)
                             }
                     }
                     
                     Picker(selection: $appUserDefaults.ableSisters,
                            label: Text("Able sisters")) {
                             ForEach(Infrastructure.AbleSisters.allCases, id: \.self) { sisters in
-                                Text(sisters.rawValue.capitalized).tag(sisters)
+                                Text(LocalizedStringKey(sisters.rawValue.capitalized)).tag(sisters)
                             }
                     }
                     
                     Picker(selection: $appUserDefaults.residentService,
                            label: Text("Residents service")) {
                             ForEach(Infrastructure.ResidentService.allCases, id: \.self) { service in
-                                Text(service.rawValue.capitalized).tag(service)
+                                Text(LocalizedStringKey(service.rawValue.capitalized)).tag(service)
                             }
                     }
                 }
@@ -86,10 +91,10 @@ struct SettingsView: View {
                     }) {
                         if self.subscriptionManager.subscriptionStatus == .subscribed {
                             Text("You're subscribed to AC Helper+")
-                                .foregroundColor(.secondaryText)
+                                .foregroundColor(.acSecondaryText)
                         } else {
                             Text("Restore purchase")
-                                .foregroundColor(.bell)
+                                .foregroundColor(.acHeaderBackground)
                         }
                     }
                     .disabled(subscriptionManager.inPaymentProgress)
@@ -106,6 +111,6 @@ struct SettingsView: View {
 
 struct SettingsView_Previews: PreviewProvider {
     static var previews: some View {
-        SettingsView().environmentObject(SubcriptionManager.shared)
+        SettingsView().environmentObject(SubscriptionManager.shared)
     }
 }

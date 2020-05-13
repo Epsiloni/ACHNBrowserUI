@@ -79,15 +79,41 @@ extension View {
     }
 }
 
+extension View {
+    func propagateHeight<K: PreferenceKey>(_ key: K.Type) -> some View where K.Value == CGFloat? {
+        overlay(
+            GeometryReader { proxy in
+                Color.clear
+                    .anchorPreference(key: key, value: .bounds, transform: { proxy[$0].height })
+            }
+        )
+    }
+    
+    func onHeightPreferenceChange<K: PreferenceKey>(_ key: K.Type = K.self, storeValueIn storage: Binding<CGFloat?>) -> some View where K.Value == CGFloat? {
+        onPreferenceChange(key, perform: { storage.wrappedValue = $0 })
+    }
+
+    func propagateWidth<K: PreferenceKey>(_ key: K.Type) -> some View where K.Value == CGFloat? {
+        overlay(
+            GeometryReader { proxy in
+                Color.clear
+                    .anchorPreference(key: key, value: .bounds, transform: { proxy[$0].width })
+            }
+        )
+    }
+
+    func onWidthPreferenceChange<K: PreferenceKey>(_ key: K.Type = K.self, storeValueIn storage: Binding<CGFloat?>) -> some View where K.Value == CGFloat? {
+        onPreferenceChange(key, perform: { storage.wrappedValue = $0 })
+    }
+}
+
 extension UIView {
     public func asImage() -> UIImage {
-        let renderer = UIGraphicsImageRenderer(bounds: bounds)
-        return renderer.image { rendererContext in
-            rendererContext.cgContext.addPath(
-            UIBezierPath(roundedRect: bounds, cornerRadius: 20).cgPath)
-            rendererContext.cgContext.clip()
-            layer.render(in: rendererContext.cgContext)
-        }
+        UIGraphicsBeginImageContextWithOptions(bounds.size, true, UIScreen.main.scale)
+        drawHierarchy(in: bounds, afterScreenUpdates: true)
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return image ?? UIImage()
     }
 }
 

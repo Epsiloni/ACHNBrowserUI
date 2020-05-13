@@ -14,7 +14,7 @@ struct ItemRowView: View {
     @EnvironmentObject private var collection: UserCollection
     
     enum DisplayMode {
-        case small, big
+        case compact, large, largeNoButton
     }
     
     let displayMode: DisplayMode
@@ -24,9 +24,9 @@ struct ItemRowView: View {
     
     private var imageSize: CGFloat {
         switch displayMode {
-        case .small:
+        case .compact:
             return 25
-        case .big:
+        case .large, .largeNoButton:
             return 100
         }
     }
@@ -40,19 +40,19 @@ struct ItemRowView: View {
             Text("\(price)")
                 .font(.caption)
                 .fontWeight(.bold)
-                .foregroundColor(.bell)
+                .foregroundColor(.acHeaderBackground)
                 .lineLimit(1)
         }
     }
     
     private var itemInfo: some View {
         Group {
-            Text(item.name)
+            Text(item.localizedName.capitalized)
                 .style(appStyle: .rowTitle)
-            Text(item.obtainedFrom ?? "unknown source")
+            Text(LocalizedStringKey(item.obtainedFrom ?? item.obtainedFromNew?.first ?? "unknown source"))
                 .font(.subheadline)
                 .fontWeight(.semibold)
-                .foregroundColor(.secondaryText)
+                .foregroundColor(.acSecondaryText)
         }
     }
     
@@ -63,9 +63,9 @@ struct ItemRowView: View {
                     Image(systemName: "clock")
                         .resizable()
                         .frame(width: 12, height: 12)
-                        .foregroundColor(.secondaryText)
+                        .foregroundColor(.acSecondaryText)
                     Text(item.formattedTimes()!)
-                        .foregroundColor(.secondaryText)
+                        .foregroundColor(.acSecondaryText)
                         .fontWeight(.semibold)
                         .font(.caption)
                 }
@@ -84,19 +84,21 @@ struct ItemRowView: View {
     
     private var itemVariants: some View {
         Group {
-            if item.variants != nil {
+            if item.variations != nil {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 2) {
-                        ForEach(item.variants!) { variant in
-                            ItemImage(path: variant.filename,
-                                      size: 25)
-                                .cornerRadius(4)
-                                .background(Rectangle()
+                        item.variations.map { variations in
+                            ForEach(variations) { variant in
+                                ItemImage(path: variant.content.image,
+                                          size: 25)
                                     .cornerRadius(4)
-                                    .foregroundColor(self.displayedVariant == variant ? Color.gray : Color.clear))
-                                .onTapGesture {
-                                    FeedbackGenerator.shared.triggerSelection()
-                                    self.displayedVariant = variant
+                                    .background(Rectangle()
+                                        .cornerRadius(4)
+                                        .foregroundColor(self.displayedVariant == variant ? Color.gray : Color.clear))
+                                    .onTapGesture {
+                                        FeedbackGenerator.shared.triggerSelection()
+                                        self.displayedVariant = variant
+                                }
                             }
                         }
                     }.frame(height: 30)
@@ -107,19 +109,21 @@ struct ItemRowView: View {
         
     var body: some View {
         HStack(spacing: 8) {
-            LikeButtonView(item: item)
-            if item.itemImage == nil && displayedVariant == nil {
+            if displayMode != .largeNoButton {
+                LikeButtonView(item: item).environmentObject(collection)
+            }
+            if item.finalImage == nil && displayedVariant == nil {
                 Image(item.appCategory.iconName())
                     .resizable()
                     .frame(width: imageSize, height: imageSize)
             } else {
-                ItemImage(path: displayedVariant?.filename ?? item.itemImage,
+                ItemImage(path: displayedVariant?.content.image ?? item.finalImage,
                           size: imageSize)
             }
             
             VStack(alignment: .leading, spacing: 2) {
                 itemInfo
-                if displayMode == .big {
+                if displayMode != .compact {
                     itemSubInfo
                     itemVariants
                 }
@@ -134,11 +138,11 @@ struct ItemRowView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
             List {
-                ItemRowView(displayMode: .big, item: static_item)
+                ItemRowView(displayMode: .large, item: static_item)
                     .environmentObject(UserCollection())
-                ItemRowView(displayMode: .small, item: static_item)
+                ItemRowView(displayMode: .compact, item: static_item)
                     .environmentObject(UserCollection())
-                ItemRowView(displayMode: .big, item: static_item)
+                ItemRowView(displayMode: .large, item: static_item)
                     .environmentObject(UserCollection())
             }
         }

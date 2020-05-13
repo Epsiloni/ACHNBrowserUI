@@ -7,80 +7,102 @@
 //
 
 import SwiftUI
+import SwiftUIKit
 import Backend
 
 enum Tabs: String, CaseIterable {
-    case items, villagers, critters
-}
-
-struct CollectionListSections: View {
-    @Binding var selectedTab: Tabs
-    @EnvironmentObject private var collection: UserCollection
-
-    private var itemsList: some View {
-        List(collection.items) { item in
-            NavigationLink(destination: ItemDetailView(item: item)) {
-                ItemRowView(displayMode: .big, item: item)
-            }
-        }
-    }
-    
-    private var villagersList: some View {
-        List(collection.villagers) { villager in
-            NavigationLink(destination: VillagerDetailView(villager: villager)) {
-                VillagerRowView(villager: villager)
-            }
-        }
-    }
-    
-    private var crittersList: some View {
-        List(collection.critters) { item in
-            NavigationLink(destination: ItemDetailView(item: item)) {
-                ItemRowView(displayMode: .big, item: item)
-            }
-        }
-    }
-    
-    var body: some View {
-        Group {
-            if selectedTab == .items {
-                itemsList
-            } else if selectedTab == .villagers {
-                villagersList
-            } else if selectedTab == .critters {
-                crittersList
-            }
-        }
-    }
+    case items, villagers, critters, lists
 }
 
 struct CollectionListView: View {
+    @EnvironmentObject private var collection: UserCollection
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @State private var selectedTab: Tabs = .items
+    @State private var sheet: Sheet.SheetType?
+        
+    var body: some View {
+        NavigationView {
+            List {
+                Section(header: picker) {
+                    if selectedTab == .items && !collection.items.isEmpty {
+                        ForEach(collection.items) { item in
+                            NavigationLink(destination: ItemDetailView(item: item)) {
+                                ItemRowView(displayMode: .large, item: item)
+                            }
+                        }
+                    } else if selectedTab == .villagers && !collection.villagers.isEmpty {
+                        ForEach(collection.villagers) { villager in
+                            NavigationLink(destination: VillagerDetailView(villager: villager)) {
+                                VillagerRowView(villager: villager)
+                            }
+                        }
+                    } else if selectedTab == .critters && !collection.critters.isEmpty {
+                        ForEach(collection.critters) { critter in
+                            NavigationLink(destination: ItemDetailView(item: critter)) {
+                                ItemRowView(displayMode: .large, item: critter)
+                            }
+                        }
+                    } else if selectedTab == .lists {
+                        userListsSections
+                    }  else {
+                        emptyView
+                    }
+                }
+            }
+            .listStyle(GroupedListStyle())
+            .navigationBarTitle(Text("Collection"),
+                                displayMode: .automatic)
+            .sheet(item: $sheet, content: { Sheet(sheetType: $0) })
+            
+            if collection.items.isEmpty {
+                placeholderView
+            } else {
+                ItemDetailView(item: collection.items.first!)
+            }
+        }
+    }
+    
+    private var userListsSections: some View {
+        Group {
+            if subscriptionManager.subscriptionStatus == .subscribed || collection.lists.isEmpty {
+                Button(action: {
+                    self.sheet = .userListForm(editingList: nil)
+                }) {
+                    Text("Create a new list").foregroundColor(.acHeaderBackground)
+                }
+            }
+            ForEach(collection.lists) { list in
+                NavigationLink(destination: UserListDetailView(list: list)) {
+                    UserListRow(list: list)
+                }
+            }.onDelete { indexes in
+                self.collection.deleteList(at: indexes.first!)
+            }
+            if subscriptionManager.subscriptionStatus != .subscribed && collection.lists.count >= 1 {
+                UserListSubscribeCallView(sheet: $sheet)
+            }
+        }
+    }
     
     private var placeholderView: some View {
         Text("Please select or go stars some items!")
-            .foregroundColor(.secondary)
-            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-            .background(Color.dialogue)
+            .foregroundColor(.acSecondaryText)
     }
     
-    var body: some View {
-        NavigationView {
-            VStack {
-                Picker(selection: $selectedTab, label: Text("")) {
-                    ForEach(Tabs.allCases, id: \.self) { tab in
-                        Text(tab.rawValue.capitalized)
-                    }
-                }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding()
-                CollectionListSections(selectedTab: $selectedTab)
+    private var emptyView: some View {
+        let selectedTabName = NSLocalizedString(selectedTab.rawValue, comment: "")
+        return Text("When you'll stars some \(selectedTabName), they'll be displayed here.")
+            .foregroundColor(.acSecondaryText)
+    }
+    
+    private var picker: some View {
+        Picker(selection: $selectedTab, label: Text("")) {
+            ForEach(Tabs.allCases, id: \.self) { tab in
+                Text(LocalizedStringKey(tab.rawValue.capitalized))
             }
-            .background(Color.dialogue)
-            .navigationBarTitle(Text("My Stuff"),
-                                displayMode: .inline)
-            
-            placeholderView
         }
+        .pickerStyle(SegmentedPickerStyle())
+        .padding()
     }
 }
+

@@ -17,6 +17,7 @@ class DashboardViewModel: ObservableObject {
     @Published var fishes: [Item] = []
     @Published var bugs: [Item] = []
     @Published var fossils: [Item] = []
+    @Published var art: [Item] = []
         
     private var listingCancellable: AnyCancellable?
     private var islandCancellable: AnyCancellable?
@@ -27,12 +28,11 @@ class DashboardViewModel: ObservableObject {
             self?.fishes = items[.fish] ?? []
             self?.bugs = items[.bugs] ?? []
             self?.fossils = items[.fossils] ?? []
+            self?.art = items[.art]?.filter({ !$0.name.contains("(fake)") }) ?? []
         }
-        fetchIsland()
-        fetchListings()
     }
     
-    private func fetchListings() {
+    func fetchListings() {
         listingCancellable = NookazonService
             .recentListings()
             .receive(on: RunLoop.main)
@@ -42,12 +42,13 @@ class DashboardViewModel: ObservableObject {
     }
     
     private func fetchIsland() {
+        /*
         islandCancellable = TurnipExchangeService.shared
             .fetchIslands()
             .receive(on: RunLoop.main)
             .sink(receiveValue: { [weak self] islands in
                 self?.island = islands.first
             })
+        */
     }
-    
 }
